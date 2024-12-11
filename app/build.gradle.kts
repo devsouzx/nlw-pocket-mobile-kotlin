@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.devsouzx.nearby"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.devsouzx.nearby"
