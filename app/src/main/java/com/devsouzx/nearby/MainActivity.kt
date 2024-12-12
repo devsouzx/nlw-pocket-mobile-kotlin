@@ -4,20 +4,28 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.devsouzx.nearby.data.model.Market
-import com.devsouzx.nearby.ui.screen.HomeScreen
-import com.devsouzx.nearby.ui.screen.MarketDetailsScreen
-import com.devsouzx.nearby.ui.screen.SplashScreen
-import com.devsouzx.nearby.ui.screen.WelcomeScreen
-import com.devsouzx.nearby.ui.screen.route.Home
-import com.devsouzx.nearby.ui.screen.route.Splash
-import com.devsouzx.nearby.ui.screen.route.Welcome
+import com.devsouzx.nearby.ui.screen.home.HomeScreen
+import com.devsouzx.nearby.ui.screen.home.HomeViewModel
+import com.devsouzx.nearby.ui.screen.market_details.MarketDetailsScreen
+import com.devsouzx.nearby.ui.screen.splash.SplashScreen
+import com.devsouzx.nearby.ui.screen.welcome.WelcomeScreen
+import com.devsouzx.nearby.ui.route.Home
+import com.devsouzx.nearby.ui.route.QRCodeScanner
+import com.devsouzx.nearby.ui.route.Splash
+import com.devsouzx.nearby.ui.route.Welcome
+import com.devsouzx.nearby.ui.screen.market_details.MarketDetailsUiEvent
+import com.devsouzx.nearby.ui.screen.market_details.MarketDetailsViewModel
+import com.devsouzx.nearby.ui.screen.qrcode_scanner.QRCodeScannerScreen
 import com.devsouzx.nearby.ui.theme.NearbyTheme
 
 class MainActivity : ComponentActivity() {
@@ -27,6 +35,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             NearbyTheme {
                 val navController = rememberNavController()
+
+                val homeViewModel by viewModels<HomeViewModel>()
+                val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
+
+                val marketDetailsViewModel by viewModels<MarketDetailsViewModel>()
+                val marketDetailsUiState by marketDetailsViewModel.uiState.collectAsStateWithLifecycle()
+
                 NavHost(
                     navController = navController,
                     startDestination = Splash
@@ -49,7 +64,9 @@ class MainActivity : ComponentActivity() {
                         HomeScreen(
                             onNavigateToMarketDetails = { selectedMarket ->
                                 navController.navigate(selectedMarket)
-                            }
+                            },
+                            uiState = homeUiState,
+                            onEvent = homeViewModel::onEvent
                         )
                     }
                     composable<Market> {
@@ -57,8 +74,28 @@ class MainActivity : ComponentActivity() {
 
                         MarketDetailsScreen(
                             market = selectedMarket,
+                            uiState = marketDetailsUiState,
+                            onEvent = marketDetailsViewModel::onEvent,
                             onNavigateBack = {
                                 navController.popBackStack()
+                            },
+                            onNavigateToQRCodeScanner = {
+                                navController.navigate(QRCodeScanner)
+                            }
+                        )
+                    }
+
+                    composable<QRCodeScanner> {
+                        QRCodeScannerScreen(
+                            onCompletedScan = { qrCodeContent ->
+                                if (qrCodeContent.isNotEmpty()) {
+                                    marketDetailsViewModel.onEvent(
+                                        MarketDetailsUiEvent.OnFetchCoupon(
+                                            qrCodeContent
+                                        )
+                                    )
+                                    navController.popBackStack()
+                                }
                             }
                         )
                     }
